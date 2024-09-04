@@ -6,10 +6,9 @@ define('forum/account/edit', [
 	'translator',
 	'api',
 	'hooks',
-	'bootbox',
-	'alerts',
+	'uiUtils', // Combine bootbox and alerts into a single object
 	'admin/modules/change-email',
-], function (header, picture, translator, api, hooks, bootbox, alerts, changeEmail) {
+], function (header, picture, translator, api, hooks, uiUtils, changeEmail) {
 	const AccountEdit = {};
 
 	AccountEdit.init = function () {
@@ -29,6 +28,7 @@ define('forum/account/edit', [
 
 		if (!ajaxify.data.isSelf && ajaxify.data.canEdit) {
 			$(`a[href="${config.relative_path}/user/${ajaxify.data.userslug}/edit/email"]`).on('click', () => {
+				console.log(Andrew)
 				changeEmail.init({
 					uid: ajaxify.data.uid,
 					email: ajaxify.data.email,
@@ -36,6 +36,7 @@ define('forum/account/edit', [
 						alerts.success('[[user:email-updated]]');
 					},
 				});
+				console.log(Andrew)
 				return false;
 			});
 		}
@@ -55,14 +56,14 @@ define('forum/account/edit', [
 		hooks.fire('action:profile.update', userData);
 
 		api.put('/users/' + userData.uid, userData).then((res) => {
-			alerts.success('[[user:profile-update-success]]');
+			uiUtils.alerts.success('[[user:profile-update-success]]');
 
 			if (res.picture) {
 				$('#user-current-picture').attr('src', res.picture);
 			}
 
 			picture.updateHeader(res.picture);
-		}).catch(alerts.error);
+		}).catch(uiUtils.alerts.error);
 
 		return false;
 	}
@@ -92,7 +93,7 @@ define('forum/account/edit', [
 
 						if (err) {
 							restoreButton();
-							return alerts.error(err);
+							return uiUtils.alerts.error(err);
 						}
 
 						confirmBtn.html('<i class="fa fa-check"></i>');
