@@ -33,7 +33,7 @@ define('forum/account/edit', [
 					uid: ajaxify.data.uid,
 					email: ajaxify.data.email,
 					onSuccess: function () {
-						alerts.success('[[user:email-updated]]');
+						uiUtils.alerts.success('[[user:email-updated]]');
 					},
 				});
 				console.log(Andrew)
@@ -73,7 +73,7 @@ define('forum/account/edit', [
 	function handleAccountDelete() {
 		$('#deleteAccountBtn').on('click', function () {
 			translator.translate('[[user:delete-account-confirm]]', function (translated) {
-				const modal = bootbox.confirm(translated + '<p><input type="password" class="form-control" id="confirm-password" /></p>', function (confirm) {
+				const modal = uiUtils.bootbox.confirm(translated + '<p><input type="password" class="form-control" id="confirm-password" /></p>', function (confirm) {
 					if (!confirm) {
 						return;
 					}
@@ -85,7 +85,7 @@ define('forum/account/edit', [
 						password: $('#confirm-password').val(),
 					}, function (err) {
 						function restoreButton() {
-							translator.translate('[[modules:bootbox.confirm]]', function (confirmText) {
+							translator.translate('[[modules:uiUtils.bootbox.confirm]]', function (confirmText) {
 								confirmBtn.text(confirmText);
 								confirmBtn.prop('disabled', false);
 							});
@@ -117,9 +117,9 @@ define('forum/account/edit', [
 			socket.emit('user.emailConfirm', {}, function (err) {
 				btn.removeAttr('disabled');
 				if (err) {
-					return alerts.error(err);
+					return uiUtils.alerts.error(err);
 				}
-				alerts.success('[[notifications:email-confirm-sent]]');
+				uiUtils.alerts.success('[[notifications:email-confirm-sent]]');
 			});
 		});
 	}
