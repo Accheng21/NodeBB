@@ -28,7 +28,6 @@ define('forum/account/edit', [
 
 		if (!ajaxify.data.isSelf && ajaxify.data.canEdit) {
 			$(`a[href="${config.relative_path}/user/${ajaxify.data.userslug}/edit/email"]`).on('click', () => {
-				console.log(Andrew)
 				changeEmail.init({
 					uid: ajaxify.data.uid,
 					email: ajaxify.data.email,
@@ -36,7 +35,6 @@ define('forum/account/edit', [
 						uiUtils.alerts.success('[[user:email-updated]]');
 					},
 				});
-				console.log(Andrew)
 				return false;
 			});
 		}
