@@ -1,8 +1,48 @@
 'use strict';
 
-module.exports = function (module) {
-	const helpers = require('./helpers');
+const helpers = require('./helpers');
 
+module.exports = function (module) {
+	// Helper Functions
+	async function executeQuery(client, query) {
+		return await client.query(query);
+	}
+
+	async function checkIfKeysExist(module, keys) {
+		const res = await module.pool.query({
+			name: 'existsArray',
+			text: `
+			SELECT o."_key" k
+			FROM "legacy_object_live" o
+			WHERE o."_key" = ANY($1::TEXT[])`,
+			values: [keys],
+		});
+		return keys.map(k => res.rows.some(r => r.k === k));
+	}
+
+	async function checkIfzSetsExist(module, keys) {
+		const members = await Promise.all(
+			keys.map(key => module.getSortedSetRange(key, 0, 0))
+		);
+		return members.map(member => member.length > 0);
+	}
+
+	async function checkExists(module, key) {
+		const type = await module.type(key);
+		if (type === 'zset') {
+			const members = await module.getSortedSetRange(key, 0, 0);
+			return members.length > 0;
+		}
+		const res = await module.pool.query({
+			name: 'exists',
+			text: `
+			SELECT EXISTS(SELECT * FROM "legacy_object_live" WHERE "_key" = $1::TEXT LIMIT 1) e`,
+			values: [key],
+		});
+		return res.rows[0].e;
+	}
+
+	// Module Functions
 	module.flushdb = async function () {
 		await module.pool.query(`DROP SCHEMA "public" CASCADE`);
 		await module.pool.query(`CREATE SCHEMA "public"`);
@@ -13,63 +53,26 @@ module.exports = function (module) {
 	};
 
 	module.exists = async function (key) {
-		if (!key) {
-			return;
-		}
+		if (!key) return;
+
 		const isArray = Array.isArray(key);
-		if (isArray && !key.length) {
-			return [];
-		}
+		if (isArray && !key.length) return [];
 
-		async function checkIfzSetsExist(keys) {
-			const members = await Promise.all(
-				keys.map(key => module.getSortedSetRange(key, 0, 0))
-			);
-			return members.map(member => member.length > 0);
-		}
-
-		async function checkIfKeysExist(keys) {
-			const res = await module.pool.query({
-				name: 'existsArray',
-				text: `
-				SELECT o."_key" k
-  				FROM "legacy_object_live" o
- 				WHERE o."_key" = ANY($1::TEXT[])`,
-				values: [keys],
-			});
-			return keys.map(k => res.rows.some(r => r.k === k));
-		}
-
-		// Redis/Mongo consider empty zsets as non-existent, match that behaviour
 		if (isArray) {
 			const types = await Promise.all(key.map(module.type));
-			const zsetKeys = key.filter((_key, i) => types[i] === 'zset');
-			const otherKeys = key.filter((_key, i) => types[i] !== 'zset');
-			const [zsetExits, otherExists] = await Promise.all([
-				checkIfzSetsExist(zsetKeys),
-				checkIfKeysExist(otherKeys),
+			const zsetKeys = key.filter((_, i) => types[i] === 'zset');
+			const otherKeys = key.filter((_, i) => types[i] !== 'zset');
+			const [zsetExists, otherExists] = await Promise.all([
+				checkIfzSetsExist(module, zsetKeys),
+				checkIfKeysExist(module, otherKeys),
 			]);
-			const existsMap = Object.create(null);
-			zsetKeys.forEach((k, i) => { existsMap[k] = zsetExits[i]; });
+			const existsMap = {};
+			zsetKeys.forEach((k, i) => { existsMap[k] = zsetExists[i]; });
 			otherKeys.forEach((k, i) => { existsMap[k] = otherExists[i]; });
 			return key.map(k => existsMap[k]);
+		} else {
+			return await checkExists(module, key);
 		}
-		const type = await module.type(key);
-		if (type === 'zset') {
-			const members = await module.getSortedSetRange(key, 0, 0);
-			return members.length > 0;
-		}
-		const res = await module.pool.query({
-			name: 'exists',
-			text: `
-			SELECT EXISTS(SELECT *
-					FROM "legacy_object_live"
-					WHERE "_key" = $1::TEXT
-					LIMIT 1) e`,
-			values: [key],
-		});
-
-		return res.rows[0].e;
 	};
 
 	module.scan = async function (params) {

@@ -6,9 +6,10 @@ define('forum/account/edit', [
 	'translator',
 	'api',
 	'hooks',
-	'uiUtils', // Combine bootbox and alerts into a single object
+	'bootbox',
+	'alerts',
 	'admin/modules/change-email',
-], function (header, picture, translator, api, hooks, uiUtils, changeEmail) {
+], function (header, picture, translator, api, hooks, bootbox, alerts, changeEmail) {
 	const AccountEdit = {};
 
 	AccountEdit.init = function () {
@@ -32,7 +33,7 @@ define('forum/account/edit', [
 					uid: ajaxify.data.uid,
 					email: ajaxify.data.email,
 					onSuccess: function () {
-						uiUtils.alerts.success('[[user:email-updated]]');
+						alerts.success('[[user:email-updated]]');
 					},
 				});
 				return false;
@@ -54,14 +55,14 @@ define('forum/account/edit', [
 		hooks.fire('action:profile.update', userData);
 
 		api.put('/users/' + userData.uid, userData).then((res) => {
-			uiUtils.alerts.success('[[user:profile-update-success]]');
+			alerts.success('[[user:profile-update-success]]');
 
 			if (res.picture) {
 				$('#user-current-picture').attr('src', res.picture);
 			}
 
 			picture.updateHeader(res.picture);
-		}).catch(uiUtils.alerts.error);
+		}).catch(alerts.error);
 
 		return false;
 	}
@@ -71,7 +72,7 @@ define('forum/account/edit', [
 	function handleAccountDelete() {
 		$('#deleteAccountBtn').on('click', function () {
 			translator.translate('[[user:delete-account-confirm]]', function (translated) {
-				const modal = uiUtils.bootbox.confirm(translated + '<p><input type="password" class="form-control" id="confirm-password" /></p>', function (confirm) {
+				const modal = bootbox.confirm(translated + '<p><input type="password" class="form-control" id="confirm-password" /></p>', function (confirm) {
 					if (!confirm) {
 						return;
 					}
@@ -83,7 +84,7 @@ define('forum/account/edit', [
 						password: $('#confirm-password').val(),
 					}, function (err) {
 						function restoreButton() {
-							translator.translate('[[modules:uiUtils.bootbox.confirm]]', function (confirmText) {
+							translator.translate('[[modules:bootbox.confirm]]', function (confirmText) {
 								confirmBtn.text(confirmText);
 								confirmBtn.prop('disabled', false);
 							});
@@ -91,7 +92,7 @@ define('forum/account/edit', [
 
 						if (err) {
 							restoreButton();
-							return uiUtils.alerts.error(err);
+							return alerts.error(err);
 						}
 
 						confirmBtn.html('<i class="fa fa-check"></i>');
@@ -115,9 +116,9 @@ define('forum/account/edit', [
 			socket.emit('user.emailConfirm', {}, function (err) {
 				btn.removeAttr('disabled');
 				if (err) {
-					return uiUtils.alerts.error(err);
+					return alerts.error(err);
 				}
-				uiUtils.alerts.success('[[notifications:email-confirm-sent]]');
+				alerts.success('[[notifications:email-confirm-sent]]');
 			});
 		});
 	}
