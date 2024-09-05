@@ -55,6 +55,23 @@ describe('Key methods', () => {
 		});
 	});
 
+	it('should check for existence of both regular keys and zset keys', async () => {
+	    // Add a regular key and a zset key
+	    await db.set('testRegularKey', 'value1');
+	    await db.sortedSetAdd('testZsetKey', 1, 'member1');
+
+	    // Check existence of both keys
+	    const result = await db.exists(['testRegularKey', 'testZsetKey']);
+
+	    // Assert that both keys exist
+	    assert.deepStrictEqual(result, [true, true]);
+
+	    // Check a non-existing key
+	    const nonExistingResult = await db.exists(['testRegularKey', 'nonExistingKey']);
+	    assert.deepStrictEqual(nonExistingResult, [true, false]);
+	});
+
+
 	it('should return false if key does not exist', (done) => {
 		db.exists('doesnotexist', function (err, exists) {
 			assert.ifError(err);
