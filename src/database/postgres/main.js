@@ -9,14 +9,15 @@ module.exports = function (module) {
 	}
 
 	async function checkIfKeysExist(module, keys) {
-		const res = await module.pool.query({
+		const query = {
 			name: 'existsArray',
 			text: `
 			SELECT o."_key" k
 			FROM "legacy_object_live" o
 			WHERE o."_key" = ANY($1::TEXT[])`,
 			values: [keys],
-		});
+		};
+		const res = await executeQuery(module.pool, query);
 		return keys.map(k => res.rows.some(r => r.k === k));
 	}
 
@@ -33,23 +34,24 @@ module.exports = function (module) {
 			const members = await module.getSortedSetRange(key, 0, 0);
 			return members.length > 0;
 		}
-		const res = await module.pool.query({
+		const query = {
 			name: 'exists',
 			text: `
 			SELECT EXISTS(SELECT * FROM "legacy_object_live" WHERE "_key" = $1::TEXT LIMIT 1) e`,
 			values: [key],
-		});
+		};
+		const res = await executeQuery(module.pool, query);
 		return res.rows[0].e;
 	}
 
 	// Module Functions
 	module.flushdb = async function () {
-		await module.pool.query(`DROP SCHEMA "public" CASCADE`);
-		await module.pool.query(`CREATE SCHEMA "public"`);
+		await executeQuery(module.pool, { text: `DROP SCHEMA "public" CASCADE` });
+		await executeQuery(module.pool, { text: `CREATE SCHEMA "public"` });
 	};
 
 	module.emptydb = async function () {
-		await module.pool.query(`DELETE FROM "legacy_object"`);
+		await executeQuery(module.pool, { text: `DELETE FROM "legacy_object"` });
 	};
 
 	module.exists = async function (key) {
@@ -70,9 +72,8 @@ module.exports = function (module) {
 			zsetKeys.forEach((k, i) => { existsMap[k] = zsetExists[i]; });
 			otherKeys.forEach((k, i) => { existsMap[k] = otherExists[i]; });
 			return key.map(k => existsMap[k]);
-		} else {
-			return await checkExists(module, key);
 		}
+		return await checkExists(module, key);
 	};
 
 	module.scan = async function (params) {
