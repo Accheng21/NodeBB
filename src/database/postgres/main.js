@@ -17,6 +17,7 @@ module.exports = function (module) {
 			WHERE o."_key" = ANY($1::TEXT[])`,
 			values: [keys],
 		};
+		console.log("Andrew")
 		const res = await executeQuery(module.pool, query);
 		return keys.map(k => res.rows.some(r => r.k === k));
 	}
@@ -25,10 +26,12 @@ module.exports = function (module) {
 		const members = await Promise.all(
 			keys.map(key => module.getSortedSetRange(key, 0, 0))
 		);
+		console.log("Andrew")
 		return members.map(member => member.length > 0);
 	}
 
 	async function checkExists(module, key) {
+		console.log("Andrew")
 		const type = await module.type(key);
 		if (type === 'zset') {
 			const members = await module.getSortedSetRange(key, 0, 0);
@@ -41,6 +44,7 @@ module.exports = function (module) {
 			values: [key],
 		};
 		const res = await executeQuery(module.pool, query);
+		
 		return res.rows[0].e;
 	}
 
